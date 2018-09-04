@@ -69,7 +69,7 @@ vote_shares.head()
 
 # In[3]:
 
-vote_shares.reset_index().to_csv("~/Downloads/vote_shares.csv")
+vote_shares.reset_index().to_csv("../data/data_out/vote_shares.csv")
 
 
 # ## Change in vote share 2014-2018 by party (where available)
@@ -86,7 +86,7 @@ plt.ylabel("Frequency")
 
 # In[5]:
 
-vote_share_change.to_csv("~/Downloads/vote_share_change_2014_2018.csv")
+vote_share_change.to_csv("../data/data_out/vote_share_change_2014_2018.csv")
 
 
 # ## Median annual pay 2012-2017
@@ -111,7 +111,7 @@ earnings.sort_values(2017, ascending=True).head()
 
 # In[7]:
 
-earnings.to_csv("~/Downloads/median_annual_pay.csv")
+earnings.to_csv("../data/data_out/median_annual_pay.csv")
 
 
 # ## Map of local authorities to regions
@@ -133,7 +133,7 @@ authority_to_region.head()
 
 # In[9]:
 
-authority_to_region.reset_index().to_csv("~/Downloads/authority_to_region.csv")
+authority_to_region.reset_index().to_csv("../data/data_out/authority_to_region.csv")
 
 
 # ## Housing waiting lists 2010 vs 2017
@@ -158,7 +158,7 @@ waiting_list = (
 
 # In[11]:
 
-waiting_list.reset_index().to_csv("~/Downloads/housing_waiting_lists_2010_2017")
+waiting_list.reset_index().to_csv("../data/data_out/housing_waiting_lists_2010_2017.csv")
 
 
 # ## Leave vote share in the referendum
@@ -177,7 +177,7 @@ leave_vote_share = (
 
 # In[13]:
 
-leave_vote_share.reset_index().to_csv("~/Downloads/leave_vote_share_by_authority.csv")
+leave_vote_share.reset_index().to_csv("../data/data_out/leave_vote_share_by_authority.csv")
 
 
 # ## 2016 population estimates by local authority 
@@ -202,7 +202,7 @@ total_population_by_authority.sort_values(ascending=False).head()
 
 # In[15]:
 
-total_population_by_authority.reset_index().to_csv("~/Downloads/population_estimate_2016_by_local_authority.csv")
+total_population_by_authority.reset_index().to_csv("../data/data_out/population_estimate_2016_by_local_authority.csv")
 
 
 # In[16]:
@@ -282,12 +282,12 @@ plt.xlabel("Housing waitlist 2010 / housing waitlist 2017 (log scale)")
 plt.ylabel("Change in labour vote share")
 
 
-# In[20]:
+# In[ ]:
 
 model = pystan.StanModel(file="../stan/model.stan")
 
 
-# In[21]:
+# In[ ]:
 
 predictors = ['waiting_list_ratio', 'median_income_2017', 'leave_vote_share']
 model_input = {
@@ -303,19 +303,19 @@ samples = fit.to_dataframe()
 samples.head()
 
 
-# In[22]:
+# In[ ]:
 
 print(fit.stansummary(pars=[p for p in fit.model_pars 
                             if p not in ['log_lik', 'y_tilde']
                             and 'z' not in p]))
 
 
-# In[23]:
+# In[ ]:
 
 region_stan_to_region = dm.groupby('region_stan')['region'].first()
 
 
-# In[24]:
+# In[ ]:
 
 b_samples = samples[[c for c in samples.columns if c[:2] == 'b[']].copy()
 l = list(map(lambda s: s.strip('b[').strip(']').split(','), b_samples.columns))
@@ -328,7 +328,7 @@ mean_regression_effects = b_samples.sort_index(axis=1).mean().unstack().T
 mean_regression_effects.style.highlight_min(axis=0)
 
 
-# In[25]:
+# In[ ]:
 
 output = dm.copy()
 ppc_samples = samples[[c for c in samples.columns if 'y_tilde' in c]].copy()
@@ -340,7 +340,7 @@ output['ppc_upper'] = ppc_samples.quantile(0.9).values
 log_lik_samples.mean().mean()
 
 
-# In[26]:
+# In[ ]:
 
 f, ax = plt.subplots(figsize=[12, 8])
 
@@ -363,10 +363,11 @@ ax.set_ylabel('Change in Labour share of Lab/Con vote from 2014 to 2018')
 ax.set_title('Labour did worse vs Tories in leave-voting areas\n (Except Adur and Worthing - what happened there??)', fontsize=14)
 
 
-# In[27]:
+# In[ ]:
 
 f, axes = plt.subplots(3, 3, figsize=[12, 8], sharex=True, sharey=True)
-f.suptitle("The effect was similar across the country", fontsize=14)
+f.suptitle("There seems to be a similar relationship between leave voting\n"
+           "and Labour performance in all the regions", fontsize=14)
 
 axes = axes.ravel()
 x_col = 'leave_vote_share'
@@ -383,12 +384,12 @@ for ax, (reg, df) in zip(axes, output.groupby('region')):
     ax.set_title(reg.capitalize(), y=0.8)
 
 
-# In[28]:
+# In[ ]:
 
 output.loc[lambda df: df['region'] == 'london'].sort_values('leave_vote_share')
 
 
-# In[29]:
+# In[ ]:
 
 f, ax = plt.subplots(figsize=[12, 8])
 
@@ -413,10 +414,11 @@ ax.set_title("Changes in local housing waiting lists don't seem to predict chang
 
 
 
-# In[30]:
+# In[ ]:
 
 f, axes = plt.subplots(3, 3, figsize=[12, 8], sharex=True, sharey=True)
-f.suptitle("...But there are regional patterns!", fontsize=14)
+f.suptitle("There are regional patterns in the relationship between\n"
+           "local housing waiting times and Labour performance", fontsize=14)
 
 axes = axes.ravel()
 x_col = 'waiting_list_ratio'
@@ -435,7 +437,7 @@ for ax, (reg, df) in zip(axes, output.groupby('region')):
     ax.set_title(reg.capitalize(), y=0.8)
 
 
-# In[31]:
+# In[ ]:
 
 f, ax = plt.subplots(figsize=[12, 8])
 
@@ -459,10 +461,10 @@ ax.set_title("Labour tended to get bigger swings from the Tories in richer areas
 
 
 
-# In[32]:
+# In[ ]:
 
 f, axes = plt.subplots(3, 3, figsize=[12, 8], sharex=True, sharey=True)
-f.suptitle("...the size of the effect varied by region", fontsize=14)
+f.suptitle("Different income patterns in different regions!", fontsize=14)
 
 axes = axes.ravel()
 x_col = 'median_income_2017'
