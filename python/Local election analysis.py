@@ -287,7 +287,7 @@ plt.ylabel("Change in labour vote share")
 model = pystan.StanModel(file="../stan/model.stan")
 
 
-# In[ ]:
+# In[21]:
 
 predictors = ['waiting_list_ratio', 'median_income_2017', 'leave_vote_share']
 model_input = {
@@ -303,19 +303,19 @@ samples = fit.to_dataframe()
 samples.head()
 
 
-# In[ ]:
+# In[22]:
 
 print(fit.stansummary(pars=[p for p in fit.model_pars 
                             if p not in ['log_lik', 'y_tilde']
                             and 'z' not in p]))
 
 
-# In[ ]:
+# In[23]:
 
 region_stan_to_region = dm.groupby('region_stan')['region'].first()
 
 
-# In[ ]:
+# In[24]:
 
 b_samples = samples[[c for c in samples.columns if c[:2] == 'b[']].copy()
 l = list(map(lambda s: s.strip('b[').strip(']').split(','), b_samples.columns))
@@ -328,7 +328,7 @@ mean_regression_effects = b_samples.sort_index(axis=1).mean().unstack().T
 mean_regression_effects.style.highlight_min(axis=0)
 
 
-# In[ ]:
+# In[25]:
 
 output = dm.copy()
 ppc_samples = samples[[c for c in samples.columns if 'y_tilde' in c]].copy()
@@ -340,7 +340,7 @@ output['ppc_upper'] = ppc_samples.quantile(0.9).values
 log_lik_samples.mean().mean()
 
 
-# In[ ]:
+# In[26]:
 
 f, ax = plt.subplots(figsize=[12, 8])
 
@@ -363,7 +363,7 @@ ax.set_ylabel('Change in Labour share of Lab/Con vote from 2014 to 2018')
 ax.set_title('Labour did worse vs Tories in leave-voting areas\n (Except Adur and Worthing - what happened there??)', fontsize=14)
 
 
-# In[ ]:
+# In[27]:
 
 f, axes = plt.subplots(3, 3, figsize=[12, 8], sharex=True, sharey=True)
 f.suptitle("The effect was similar across the country", fontsize=14)
@@ -383,12 +383,12 @@ for ax, (reg, df) in zip(axes, output.groupby('region')):
     ax.set_title(reg.capitalize(), y=0.8)
 
 
-# In[ ]:
+# In[28]:
 
 output.loc[lambda df: df['region'] == 'london'].sort_values('leave_vote_share')
 
 
-# In[ ]:
+# In[29]:
 
 f, ax = plt.subplots(figsize=[12, 8])
 
@@ -413,7 +413,7 @@ ax.set_title("Changes in local housing waiting lists don't seem to predict chang
 
 
 
-# In[ ]:
+# In[30]:
 
 f, axes = plt.subplots(3, 3, figsize=[12, 8], sharex=True, sharey=True)
 f.suptitle("...But there are regional patterns!", fontsize=14)
@@ -435,7 +435,7 @@ for ax, (reg, df) in zip(axes, output.groupby('region')):
     ax.set_title(reg.capitalize(), y=0.8)
 
 
-# In[ ]:
+# In[31]:
 
 f, ax = plt.subplots(figsize=[12, 8])
 
@@ -459,7 +459,7 @@ ax.set_title("Labour tended to get bigger swings from the Tories in richer areas
 
 
 
-# In[ ]:
+# In[32]:
 
 f, axes = plt.subplots(3, 3, figsize=[12, 8], sharex=True, sharey=True)
 f.suptitle("...the size of the effect varied by region", fontsize=14)
