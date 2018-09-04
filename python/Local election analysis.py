@@ -96,7 +96,7 @@ vote_share_change.to_csv("~/Downloads/vote_share_change_2014_2018.csv")
 earnings = (
     # download the very big csv from here: https://download.beta.ons.gov.uk/downloads/datasets/ashe-table-8-earnings/editions/time-series/versions/1.csv
     # I got a 'permission denied' message from the ons website when I tried to read it with `read_excel` :(
-    pd.read_csv("~/Downloads/dc635491-42b8-496c-9e03-f666697e3129.csv")
+    pd.read_csv("../data/data_in/earning_data.csv")
     .loc[lambda df: (df['Geography'].str.lower().isin(vote_share_change.index))
          & (df['Sex_codelist'] == 'all')
          & (df['Statistics_codelist'] == 'median')
@@ -187,7 +187,7 @@ leave_vote_share.reset_index().to_csv("~/Downloads/leave_vote_share_by_authority
 # In[14]:
 
 # Another access denied - has to be downloaded from here: https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/wardlevelmidyearpopulationestimatesexperimental
-population_sheet_path = "/Users/teddy/Downloads/SAPE19DT8-mid-2016-ward-2016-syoa-estimates-unformatted.xls"
+population_sheet_path = "../data/data_in/population_estimates.xls"
 
 population_by_ward = (pd.read_excel(population_sheet_path, sheet_name="Mid-2016 Persons", skiprows=4, header=0)
                       .assign(authority=lambda df: df['Local Authority'].str.lower())
@@ -284,62 +284,10 @@ plt.ylabel("Change in labour vote share")
 
 # In[20]:
 
-model_code = """
-data {
-  int<lower=1> N;
-  int<lower=1> M;  // number of predictors
-  int<lower=1> R;  // number of regions
-  matrix[N, M] x;
-  int<lower=1,upper=R> region[N];
-  vector[N] y;
-}
-transformed data {
-  matrix[N, M] x_std;
-  for (m in 1:M){
-    x_std[,m] = (x[,m] - mean(x[,m])) / sd(x[,m]);
-  }
-}
-parameters {
-  matrix[M, R] b_z;     // regression coefficients
-  vector[R] a_z;    // region-specific intercept
-  real mu_a;
-  vector[M] mu_b;
-  real<lower=0> sigma_y;
-  real<lower=0> sigma_a;
-  vector<lower=0>[M] sigma_b;
-}
-transformed parameters {
-  matrix[M, R] b;
-  vector[R] a = mu_a + a_z * sigma_a;
-  for (m in 1:M){
-    b[m] = mu_b[m] + b_z[m] * sigma_b[m];
-  }
-}
-model {
-  for (n in 1:N){
-    y[n] ~ normal(a[region[n]] + x_std[n] * b[, region[n]], sigma_y);
-  }
-  a_z ~ normal(0, 1);
-  to_vector(b_z) ~ normal(0, 1);
-  mu_a ~ normal(0, 1);
-  mu_b ~ normal(0, 1);
-  sigma_a ~ normal(0, 1);
-  sigma_b ~ normal(0, 1);
-  sigma_y ~ normal(0, 1);
-}
-generated quantities {
-  vector[N] y_tilde;
-  vector[N] log_lik;
-  for (n in 1:N){
-    y_tilde[n] = normal_rng(a[region[n]] + x_std[n] * b[, region[n]], sigma_y);
-    log_lik[n] = normal_lpdf(y[n] | a[region[n]] + x_std[n] * b[, region[n]], sigma_y);
-  }
-}
-"""
-model = pystan.StanModel(model_code=model_code)
+model = pystan.StanModel(file="../stan/model.stan")
 
 
-# In[21]:
+# In[ ]:
 
 predictors = ['waiting_list_ratio', 'median_income_2017', 'leave_vote_share']
 model_input = {
@@ -355,19 +303,19 @@ samples = fit.to_dataframe()
 samples.head()
 
 
-# In[22]:
+# In[ ]:
 
 print(fit.stansummary(pars=[p for p in fit.model_pars 
                             if p not in ['log_lik', 'y_tilde']
                             and 'z' not in p]))
 
 
-# In[23]:
+# In[ ]:
 
 region_stan_to_region = dm.groupby('region_stan')['region'].first()
 
 
-# In[24]:
+# In[ ]:
 
 b_samples = samples[[c for c in samples.columns if c[:2] == 'b[']].copy()
 l = list(map(lambda s: s.strip('b[').strip(']').split(','), b_samples.columns))
@@ -380,7 +328,7 @@ mean_regression_effects = b_samples.sort_index(axis=1).mean().unstack().T
 mean_regression_effects.style.highlight_min(axis=0)
 
 
-# In[25]:
+# In[ ]:
 
 output = dm.copy()
 ppc_samples = samples[[c for c in samples.columns if 'y_tilde' in c]].copy()
@@ -392,7 +340,7 @@ output['ppc_upper'] = ppc_samples.quantile(0.9).values
 log_lik_samples.mean().mean()
 
 
-# In[26]:
+# In[ ]:
 
 f, ax = plt.subplots(figsize=[12, 8])
 
@@ -415,7 +363,7 @@ ax.set_ylabel('Change in Labour share of Lab/Con vote from 2014 to 2018')
 ax.set_title('Labour did worse vs Tories in leave-voting areas\n (Except Adur and Worthing - what happened there??)', fontsize=14)
 
 
-# In[27]:
+# In[ ]:
 
 f, axes = plt.subplots(3, 3, figsize=[12, 8], sharex=True, sharey=True)
 f.suptitle("The effect was similar across the country", fontsize=14)
@@ -435,12 +383,12 @@ for ax, (reg, df) in zip(axes, output.groupby('region')):
     ax.set_title(reg.capitalize(), y=0.8)
 
 
-# In[28]:
+# In[ ]:
 
 output.loc[lambda df: df['region'] == 'london'].sort_values('leave_vote_share')
 
 
-# In[29]:
+# In[ ]:
 
 f, ax = plt.subplots(figsize=[12, 8])
 
@@ -465,7 +413,7 @@ ax.set_title("Changes in local housing waiting lists don't seem to predict chang
 
 
 
-# In[30]:
+# In[ ]:
 
 f, axes = plt.subplots(3, 3, figsize=[12, 8], sharex=True, sharey=True)
 f.suptitle("...But there are regional patterns!", fontsize=14)
@@ -487,7 +435,7 @@ for ax, (reg, df) in zip(axes, output.groupby('region')):
     ax.set_title(reg.capitalize(), y=0.8)
 
 
-# In[31]:
+# In[ ]:
 
 f, ax = plt.subplots(figsize=[12, 8])
 
@@ -511,7 +459,7 @@ ax.set_title("Labour tended to get bigger swings from the Tories in richer areas
 
 
 
-# In[32]:
+# In[ ]:
 
 f, axes = plt.subplots(3, 3, figsize=[12, 8], sharex=True, sharey=True)
 f.suptitle("...the size of the effect varied by region", fontsize=14)
