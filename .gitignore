@@ -1,2 +1,4 @@
-data/*.csv
+data/data_in/*.xls
+data/data_in/*.csv
+data/data_out/*.csv
 .ipynb_checkpoints/*
