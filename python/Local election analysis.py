@@ -3,6 +3,7 @@
 
 # In[1]:
 
+
 import arviz as az
 import pandas as pd
 import numpy as np
@@ -15,6 +16,8 @@ from matplotlib import pyplot as plt
 plt.style.use('fr_sparse')
 
 
+# # An analysis of Labour's performance in the May 2018 local elections
+# 
 # This notebook demonstrates a statistical model that uses publicly available data about local authorities to investigate  Labour's performance in the 2018 local elections, following on from the September Campaign Lab event. There are several reasons why this could be a useul exercise - knowing which factors are most relevant can help to predict where Labour is more or less likely to gain council seats in future. Working in the other direction it is also interesting to look for wards where the Labour vote was higher or lower than would be expected given the information available to the model - this can unearth otherwise hidden dynamics or potentially highlight cases where local campaigning has been particularly effective.
 # 
 # To try and achieve this we use a Bayesian robust-errors regression model where the response variable for each local authority is the change in the Labour party's share of the aggregate two-party (i.e. Labour and Conservative) vote, compared to the previous local elections. 
@@ -56,7 +59,8 @@ plt.style.use('fr_sparse')
 
 # In[2]:
 
-get_ipython().run_cell_magic('capture', '', "\nvote_shares = fetching.fetch_vote_shares()\nvote_share_change = functions.get_vote_share_change(vote_shares)\nearnings = fetching.fetch_earnings(authorities=vote_share_change.index)\nauthority_to_region = fetching.fetch_authority_to_region()\nwaiting_list = fetching.fetch_housing_waiting_lists()\nleave_vote_share = fetching.fetch_leave_vote_share()\npopulation = fetching.fetch_population_by_authority()\n\nauthorities_all = (\n    vote_share_change\n    .join(waiting_list.add_prefix('waiting_list_'), how='left')\n    .join(population, how='left')\n    .join(earnings.add_prefix('median_income_'), how='left')\n    .join(authority_to_region)\n    .join(leave_vote_share)\n    .assign(region_stan=lambda df: functions.stanify_series(df['region']),\n            dummy_predictor=1.0)\n)\ndisplay(authorities_all.head())")
+
+get_ipython().run_cell_magic(u'capture', u'', u"\nvote_shares = fetching.fetch_vote_shares()\nvote_share_change = functions.get_vote_share_change(vote_shares)\nearnings = fetching.fetch_earnings(authorities=vote_share_change.index)\nauthority_to_region = fetching.fetch_authority_to_region()\nwaiting_list = fetching.fetch_housing_waiting_lists()\nleave_vote_share = fetching.fetch_leave_vote_share()\npopulation = fetching.fetch_population_by_authority()\n\nauthorities_all = (\n    vote_share_change\n    .join(waiting_list.add_prefix('waiting_list_'), how='left')\n    .join(population, how='left')\n    .join(earnings.add_prefix('median_income_'), how='left')\n    .join(authority_to_region)\n    .join(leave_vote_share)\n    .assign(region_stan=lambda df: functions.stanify_series(df['region']),\n            dummy_predictor=1.0)\n)\ndisplay(authorities_all.head())")
 
 
 # # Missing data
@@ -64,6 +68,7 @@ get_ipython().run_cell_magic('capture', '', "\nvote_shares = fetching.fetch_vote
 # There are some cases where not all the information is available for a local authority. The easiest way of dealing with this issue is to disregard all the cases where the information is incomplete. The downside of using this method is that a lot of potentially useful information is ignored - other options along these lines feature later in the notebook.
 
 # In[166]:
+
 
 predictors = ['dummy_predictor', 'median_income_2017', 'leave_vote_share']
 predictors_wait = ['dummy_predictor', 'median_income_2017', 'leave_vote_share', 'waiting_list_ratio']
@@ -85,6 +90,7 @@ authorities = authorities_all.dropna(subset=predictors_wait + ['lab_2p_change'],
 
 # In[179]:
 
+
 model = pystan.StanModel(file="../stan/model.stan")
 print(model.model_code)
 
@@ -92,6 +98,7 @@ print(model.model_code)
 # ## Data exploration
 
 # In[152]:
+
 
 def extreme_scatter(df, x_col, y_col, scale=5, ax=plt, x_extremes=2, y_extremes=2):
     """Scatter plot with labelled extremes"""
@@ -120,6 +127,7 @@ ylabel = axes[0].set_ylabel("Change in Labour share of 2 party vote")
 
 # In[185]:
 
+
 model_input, model_input_wait = ({
     'N': len(authorities),
     'P': len(pred),
@@ -145,6 +153,7 @@ display(samples.head())
 
 # In[186]:
 
+
 region_stan_to_region = authorities.groupby('region_stan')['region'].first()
 
 regions = list(region_stan_to_region.values)
@@ -166,6 +175,7 @@ az.compare({'waiting_list_excluded': inference_data, 'waiting_list_included': in
 
 # In[189]:
 
+
 az.plot_ppc(inference_data, data_pairs={'y': 'y_tilde'}, figsize=[12, 7], textsize=12)
 ax = plt.gca()
 lims = ax.set_xlim(-0.5, 0.4)
@@ -182,6 +192,7 @@ lims = ax.set_xlim(-0.5, 0.4)
 
 # In[200]:
 
+
 az.plot_forest(
     [inference_data], var_names=['b'], combined=True, textsize=9, r_hat=False, n_eff=False, figsize=[12, 7]
 )
@@ -192,6 +203,7 @@ title = ax.set_title("Regression parameters", fontsize=15, y=0.95)
 
 
 # In[191]:
+
 
 def la_scatter(df, x_col, ax, n_extremes=8, s=None):
 
@@ -221,6 +233,7 @@ title = ax.set_title('Labour did worse vs Tories in leave-voting local authoriti
 
 # In[192]:
 
+
 f, axes = plt.subplots(3, 3, figsize=[15, 8], sharex=True, sharey=True)
 axes = axes.ravel()
 
@@ -236,6 +249,7 @@ for ax, (region, df) in zip(axes, output.groupby('region')):
 
 # In[193]:
 
+
 f, ax = plt.subplots(figsize=[12, 8])
 plot = la_scatter(output, 'median_income_2017', ax)
 legend = ax.legend(frameon=False)
@@ -245,6 +259,7 @@ title = ax.set_title("Labour did better in higher-income local authorities", fon
 
 
 # In[194]:
+
 
 # f, axes = plt.subplots(3, 3, figsize=[12, 8], sharex=True, sharey=True)
 # f.suptitle("There were different income patterns in different regions!", fontsize=14)
